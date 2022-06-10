@@ -26,6 +26,9 @@ jobs:
           repo_token: ${{ secrets.TOKEN }}
           file: ./build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
           overwrite: true
+  windows:
+    runs-on: windows-latest
+    steps:
       - name: Build Windows exe
         run: flutter build windows
       - name: Zip Windows Build Files
