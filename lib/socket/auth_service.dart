@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:nameless_socket_flutter/socket/loading.dart';
 import 'package:uuid/uuid.dart';
 
 const _apiKey = "api_key";
@@ -34,95 +35,125 @@ class ProviderIcon extends StatelessWidget {
   }
 }
 
-enum AuthServiceProvider {
-  hypixel,
-  mojang;
+class ProviderSelectButton extends StatelessWidget {
+  final void Function(AuthServiceProvider) onSelect;
+  final AuthServiceProvider provider;
 
-  Widget createSelectButton(Function(AuthServiceProvider) onSelect) {
-    switch (this) {
-      case hypixel:
+  const ProviderSelectButton(
+      {Key? key, required this.provider, required this.onSelect})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    switch (provider) {
+      case AuthServiceProvider.hypixel:
         return ProviderIcon(
             icon: Image.asset("assets/hypixel.png"),
             text: "API Key",
-            onTap: () => onSelect(this));
-      case mojang:
+            onTap: () => onSelect(AuthServiceProvider.hypixel));
+      case AuthServiceProvider.mojang:
         return ProviderIcon(
             icon: Image.asset("assets/minecraft.png"),
             text: "Mojang",
-            onTap: () => onSelect(this));
-      default:
-        throw Error();
+            onTap: () => onSelect(AuthServiceProvider.mojang));
     }
   }
+}
 
-  Future<Widget> createWidget(
-      ResponsiveScreen screen, Function(AuthService) onConnect) async {
-    final storage = Get.find<FlutterSecureStorage>();
-    switch (this) {
-      case hypixel:
-        final keyRegex = RegExp(
-            "^[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}\$",
-            caseSensitive: false);
-        final editController =
-            TextEditingController(text: await storage.read(key: _apiKey));
+class AuthenticationController extends GetxController {
+  final storage = Get.find<FlutterSecureStorage>();
+  final keyController = TextEditingController();
+  final usernameController = TextEditingController();
+  final passwordController = TextEditingController();
+  final keyRegex = RegExp(
+      "^[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}\$",
+      caseSensitive: false);
+  final passwordVisible = false.obs;
+}
 
+class AuthenticationWidget extends GetResponsiveView<AuthenticationController> {
+  final AuthServiceProvider provider;
+  final void Function(AuthService) onConnect;
+
+  AuthenticationWidget(
+      {Key? key, required this.provider, required this.onConnect})
+      : super(key: key);
+
+  Widget _completedWidget() {
+    switch (provider) {
+      case AuthServiceProvider.hypixel:
         return TextFormField(
             autovalidateMode: AutovalidateMode.always,
-            validator: (s) => s != null && keyRegex.hasMatch(s)
+            validator: (s) => s != null && controller.keyRegex.hasMatch(s)
                 ? null
                 : "Invalid API key format",
-            controller: editController,
+            controller: controller.keyController,
             style: const TextStyle(fontSize: 20),
             decoration: InputDecoration(
                 labelText: "Hypixel API Key",
                 border: const OutlineInputBorder(),
                 suffix: IconButton(
-                    onPressed: () => onConnect(
-                        HypixelAPIAuthService(key: editController.text)),
+                    onPressed: () => onConnect(HypixelAPIAuthService(
+                        key: controller.keyController.text)),
                     icon: const Icon(Icons.play_circle))));
-      case mojang:
-        final usernameController = TextEditingController(
-            text: await storage.read(key: _mojangUsername));
-        final passwordController = TextEditingController(
-            text: await storage.read(key: _mojangPassword));
-        final passwordVisible = false.obs;
-
+      case AuthServiceProvider.mojang:
         return Wrap(
           alignment: WrapAlignment.center,
           runSpacing: screen.height * 0.04,
           children: [
             TextField(
                 keyboardType: TextInputType.emailAddress,
-                controller: usernameController,
+                controller: controller.usernameController,
                 style: const TextStyle(fontSize: 20),
                 decoration: const InputDecoration(
                     labelText: "Mojang Username(Email)",
                     border: OutlineInputBorder())),
             Obx(() => TextField(
-                obscureText: !passwordVisible.value,
+                obscureText: !controller.passwordVisible.value,
                 enableSuggestions: false,
                 autocorrect: false,
-                controller: passwordController,
+                controller: controller.passwordController,
                 style: const TextStyle(fontSize: 20),
                 decoration: InputDecoration(
                     suffix: IconButton(
-                        onPressed: () => passwordVisible.toggle(),
-                        icon: Icon(passwordVisible.value
+                        onPressed: () => controller.passwordVisible.toggle(),
+                        icon: Icon(controller.passwordVisible.value
                             ? Icons.visibility
                             : Icons.visibility_off)),
                     labelText: "Mojang Password",
                     border: const OutlineInputBorder()))),
             TextButton(
                 onPressed: () => onConnect(MojangAuthService(
-                    username: usernameController.text,
-                    password: passwordController.text)),
+                    username: controller.usernameController.text,
+                    password: controller.passwordController.text)),
                 child: const Text("Login", style: TextStyle(fontSize: 20)))
           ],
         );
-      default:
-        throw Error();
     }
   }
+
+  Future<void> _initController(
+      TextEditingController editController, String key) async {
+    final value = await controller.storage.read(key: key);
+    if (value != null) editController.text = value;
+  }
+
+  @override
+  Widget? builder() {
+    return FutureBuilder(
+        future: Future.wait([
+          _initController(controller.keyController, _apiKey),
+          _initController(controller.usernameController, _mojangUsername),
+          _initController(controller.passwordController, _mojangPassword)
+        ]),
+        builder: (_, snapshot) =>
+            snapshot.hasData ? _completedWidget() : LoadingCircle());
+  }
+}
+
+enum AuthServiceProvider {
+  hypixel,
+  mojang;
 
   static AuthServiceProvider valueOf(String name) =>
       values.firstWhere((element) => element.name == name);

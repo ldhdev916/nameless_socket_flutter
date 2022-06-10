@@ -16,11 +16,10 @@ class AuthHome extends GetResponsiveView<StompController> {
 
   @override
   Widget? builder() {
-    () async {
-      final providerName = await _storage.read(key: _providerKey) ??
-          AuthServiceProvider.hypixel.name;
-      _provider.value = AuthServiceProvider.valueOf(providerName);
-    }();
+    Get.put(AuthenticationController());
+    _storage.read(key: _providerKey).then((value) => _provider(
+        AuthServiceProvider.valueOf(
+            value ?? AuthServiceProvider.hypixel.name)));
 
     return Obx(() {
       final provider = _provider.value;
@@ -28,42 +27,43 @@ class AuthHome extends GetResponsiveView<StompController> {
         return LoadingCircle();
       } else {
         return Scaffold(
-          appBar: AppBar(
-              title: const Text("Nameless Authentication"), centerTitle: true),
-          body: Center(
-              child: SingleChildScrollView(
-                  child: Padding(
-                      padding: EdgeInsets.all(4.h),
-                      child: Column(children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: AuthServiceProvider.values
-                              .map((e) => SizedBox.fromSize(
-                                  size: Size.square(12.h),
-                                  child: e.createSelectButton((element) {
-                                    _provider.value = element;
-                                    _storage.write(
-                                        key: _providerKey, value: element.name);
-                                  })))
-                              .toList(),
-                        ),
-                        SizedBox(height: screen.height * 0.08),
-                        FutureBuilder(
-                            future:
-                                provider.createWidget(screen, (element) async {
-                              final connected =
-                                  await controller.connect(service: element);
-                              if (connected) {
-                                Get.offAllNamed("/");
-                              } else {
-                                Get.snackbar("Authentication Failed",
-                                    "Please check your auth information again");
-                              }
-                            }),
-                            builder: (_, snapshot) =>
-                                (snapshot.data as Widget?) ?? LoadingCircle())
-                      ])))),
-        );
+            appBar: AppBar(
+                title: const Text("Nameless Authentication"),
+                centerTitle: true),
+            body: Center(
+                child: SingleChildScrollView(
+                    child: Padding(
+                        padding: EdgeInsets.all(4.h),
+                        child: Column(children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: AuthServiceProvider.values
+                                .map((e) => SizedBox.fromSize(
+                                    size: Size.square(12.h),
+                                    child: ProviderSelectButton(
+                                        provider: e,
+                                        onSelect: (element) {
+                                          _provider(element);
+                                          _storage.write(
+                                              key: _providerKey,
+                                              value: element.name);
+                                        })))
+                                .toList(),
+                          ),
+                          SizedBox(height: screen.height * 0.08),
+                          AuthenticationWidget(
+                              provider: provider,
+                              onConnect: (element) async {
+                                final connected =
+                                    await controller.connect(service: element);
+                                if (connected) {
+                                  Get.offAllNamed("/");
+                                } else {
+                                  Get.snackbar("Authentication Failed",
+                                      "Please check your auth information again");
+                                }
+                              })
+                        ])))));
       }
     });
   }
