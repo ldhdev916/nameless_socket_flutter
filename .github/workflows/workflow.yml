@@ -11,7 +11,7 @@ jobs:
       - name: Setup Android Signature
         run: |
           cd android
-          echo ${{ secrets.KEY_JKS }} | base64 -d > key.jks
+          echo "${{ secrets.KEY_JKS }}" | base64 -d > key.jks
           PASSWORD=${{ secrets.PASSWORD }}
           echo -e "storePassword=$PASSWORD\nkeyPassword=$PASSWORD\nkeyAlias=key\nstoreFile=../key.jks" > key.properties
       - name: Build APK
