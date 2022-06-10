@@ -1,0 +1,36 @@
+on:
+  push:
+    tags:
+      - v*
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - name: Setup Android Signature
+        run: |
+          cd android
+          echo ${{ secrets.KEY_JKS }} | base64 -d > key.jks
+          PASSWORD=${{ secrets.PASSWORD }}
+          echo -e "storePassword=$PASSWORD\nkeyPassword=$PASSWORD\nkeyAlias=key\nstoreFile=../key.jks" > key.properties
+      - name: Build APK
+        run: flutter build apk --split-per-abi
+      - name: Release APK
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.TOKEN }}
+          file: ./build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+          overwrite: true
+      - name: Build Windows exe
+        run: flutter build windows
+      - name: Zip Windows Build Files
+        uses: papeloto/action-zip@v1
+        with:
+          files: ./build/windows/runner/Release
+          dest: Windows.zip
+      - name: Release Windows exe
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.TOKEN }}
+          file: ./Windows.zip
