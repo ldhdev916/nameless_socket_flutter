@@ -28,6 +28,7 @@ jobs:
           overwrite: true
   windows:
     runs-on: windows-latest
+    needs: build
     steps:
       - name: Build Windows exe
         run: flutter build windows
