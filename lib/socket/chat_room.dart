@@ -1,6 +1,9 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:nameless_socket_flutter/socket/notification_controller.dart';
 import 'package:nameless_socket_flutter/socket/socket.dart';
 import 'package:nameless_socket_flutter/socket/stomp_chat.dart';
 import 'package:sizer/sizer.dart';
@@ -47,13 +50,13 @@ class ChatRoom extends GetResponsiveView<StompController> {
   ChatRoom({Key? key}) : super(key: key);
 
   final _content = "".obs;
+  final _editController = TextEditingController();
 
   @override
   Widget? builder() {
     final player = Get.parameters["player"]!;
-    final editController = TextEditingController();
 
-    editController.addListener(() => _content(editController.text));
+    _editController.addListener(() => _content(_editController.text));
 
     final scrollController = ScrollController();
     return Scaffold(
@@ -94,7 +97,7 @@ class ChatRoom extends GetResponsiveView<StompController> {
             padding: EdgeInsets.only(
                 bottom: MediaQuery.of(screen.context).viewInsets.bottom),
             child: TextField(
-                controller: editController,
+                controller: _editController,
                 decoration: InputDecoration(
                     labelText: "Sending Chat",
                     border: const OutlineInputBorder(),
@@ -104,7 +107,7 @@ class ChatRoom extends GetResponsiveView<StompController> {
                             : () {
                                 controller.sendChat(
                                     receiver: player, content: _content.value);
-                                editController.clear();
+                                _editController.clear();
                               },
                         icon: const Icon(Icons.send),
                         color: Colors.yellow))),

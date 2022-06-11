@@ -2,9 +2,11 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:typed_data';
 
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:nameless_socket_flutter/socket/auth_service.dart';
+import 'package:nameless_socket_flutter/socket/notification_controller.dart';
 import 'package:nameless_socket_flutter/socket/stomp_chat.dart';
 import 'package:stomp_dart_client/stomp.dart';
 import 'package:stomp_dart_client/stomp_config.dart';
@@ -71,6 +73,9 @@ class StompController extends GetxController {
                         content: content, id: chatId, at: DateTime.now());
                     final chat = StompChatReceived(data: data, sender: sender);
                     getOrCreateChats(player: sender).add(chat);
+                    var controller = Get.find<NotificationController>();
+                    log(controller.toString());
+                    controller.pushNotification(chat: chat);
                   });
 
               subscribeUser(

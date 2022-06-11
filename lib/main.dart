@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:nameless_socket_flutter/socket/chat_room.dart';
 import 'package:nameless_socket_flutter/socket/loading.dart';
+import 'package:nameless_socket_flutter/socket/notification_controller.dart';
 import 'package:nameless_socket_flutter/socket/player_icon.dart';
 import 'package:nameless_socket_flutter/socket/socket.dart';
 import 'package:nameless_socket_flutter/socket/stomp_chat.dart';
@@ -12,6 +13,7 @@ import 'socket/auth.dart';
 
 void main() {
   Get.put(StompController(), permanent: true);
+  Get.put(NotificationController(), permanent: true);
   Get.put(
       const FlutterSecureStorage(
           aOptions: AndroidOptions(encryptedSharedPreferences: true)),
@@ -34,7 +36,13 @@ class NamelessApp extends GetView<StompController> {
                       page: () => Obx(() => controller.connected
                           ? SocketHome()
                           : LoadingCircle())),
-                  GetPage(name: "/chat/:player", page: () => ChatRoom()),
+                  GetPage(
+                      name: "/chat/:player",
+                      page: () => ChatRoom(),
+                      binding: BindingsBuilder(() {
+                        Get.put(OnGoingChatController(
+                            player: Get.parameters["player"]!));
+                      })),
                   GetPage(name: "/auth", page: () => AuthHome())
                 ]));
   }

@@ -13,6 +13,7 @@ class AuthHome extends GetResponsiveView<StompController> {
   final _storage = Get.find<FlutterSecureStorage>();
   final _providerKey = "auth_provider";
   final _provider = Rxn<AuthServiceProvider>();
+  final _authenticating = false.obs;
 
   @override
   Widget? builder() {
@@ -23,7 +24,7 @@ class AuthHome extends GetResponsiveView<StompController> {
 
     return Obx(() {
       final provider = _provider.value;
-      if (provider == null) {
+      if (provider == null || _authenticating.value) {
         return LoadingCircle();
       } else {
         return Scaffold(
@@ -54,8 +55,10 @@ class AuthHome extends GetResponsiveView<StompController> {
                           AuthenticationWidget(
                               provider: provider,
                               onConnect: (element) async {
+                                _authenticating(true);
                                 final connected =
                                     await controller.connect(service: element);
+                                _authenticating(false);
                                 if (connected) {
                                   Get.offAllNamed("/");
                                 } else {
